@@ -1,3 +1,5 @@
+getgenv().StartWithDebug = true
+
 local StartClock = os.clock()
 
 local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
