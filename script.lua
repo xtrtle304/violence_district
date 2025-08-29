@@ -27,7 +27,6 @@ local Cheat = {
     FunctionHooks = {},
     Signals = {},
     Drawings = {},
-    Modules = {},
     Variables = {
         Player = nil,
         Character = nil,
@@ -35,7 +34,7 @@ local Cheat = {
         LineGUI = nil,
         GoalGUI = nil,
     },
-    DebugMode = _G.StartWithDebug,
+    DebugMode = getgenv().StartWithDebug,
 } do
     local Options = Cheat.Library.Options
     local Toggles = Cheat.Library.Toggles
@@ -151,9 +150,18 @@ local Cheat = {
 
                     SurvivorGroupbox:AddDivider()
 
-                    SurvivorGroupbox:AddToggle("NoHorizontalSlash", {
-                        Text = "No Horizontal Slash",
+                    SurvivorGroupbox:AddToggle("WalkspeedMultiplier", {
+                        Text = "Walkspeed Multiplier",
                         Default = false
+                    })
+
+                    SurvivorGroupbox:AddSlider("WalkspeedMultiplierAmount", {
+                        Text = "Value",
+                        Default = 1,
+                        Min = 1,
+                        Max = 5,
+                        Rounding = 2,
+                        Compact = true
                     })
                 end
             end
@@ -225,11 +233,13 @@ local Cheat = {
     do
         Cheat.Hooks.__index = hookmetamethod(game, "__index", newcclosure(function(self, ind)
             --// autogenerator hook
-            if not checkcaller() and self == Cheat.Variables.LineGUI then
-                if Options.AutoGeneratorMode.Value == "Perfect" then
-                    return 104 + Cheat.Variables.GoalGUI.Rotation
-                else
-                    return 115 + Cheat.Variables.GoalGUI.Rotation
+            if not checkcaller() then
+                if self == Cheat.Variables.LineGUI then
+                    if Options.AutoGeneratorMode.Value == "Perfect" then
+                        return 104 + Cheat.Variables.GoalGUI.Rotation
+                    else
+                        return 115 + Cheat.Variables.GoalGUI.Rotation
+                    end
                 end
             end
 
@@ -241,7 +251,21 @@ local Cheat = {
         end))
 
         Cheat.Hooks.__namecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-            return Cheat.Hooks.__namecall(self, ...)
+            local Arguments = {...}
+            local NamecallMethod = getnamecallmethod()
+            local CallingScript = getcallingscript()
+
+            if not checkcaller() then
+                if Toggles.WalkspeedMultiplier.Value and self == Cheat.Variables.Character and Cheat.Variables.Player.Team.Name == "Survivors" then
+                    if NamecallMethod == "GetAttribute" then
+                        if Arguments[1] == "speedboost" then
+                            return Options.WalkspeedMultiplierAmount.Value
+                        end
+                    end
+                end
+            end
+
+            return Cheat.Hooks.__namecall(self, unpack(Arguments))
         end))
     end
 
@@ -622,7 +646,7 @@ local Cheat = {
                                     for _, Drawing in Cheat.Drawings[Window] do
                                         Drawing:Destroy()
                                     end
-                                    Cheat.Drawings[Generator] = nil
+                                    Cheat.Drawings[Window] = nil
                                     OnParentChangedSignal:Disconnect()
                                 end
                             end
@@ -679,7 +703,7 @@ local Cheat = {
                                     for _, Drawing in Cheat.Drawings[Hook] do
                                         Drawing:Destroy()
                                     end
-                                    Cheat.Drawings[Generator] = nil
+                                    Cheat.Drawings[Hook] = nil
                                     OnParentChangedSignal:Disconnect()
                                 end
                             end
@@ -872,4 +896,12 @@ local Cheat = {
         Description = `Successfully loaded in {string.format("%.1f", os.clock() - StartClock)} seconds`,
         Duration = 4
     })
+
+    if Cheat.DebugMode then
+        Cheat.Library:Notify({
+            Title = "Debug mode",
+            Description = `Loaded in Debug mode`,
+            Duration = 4
+        })
+    end
 end
