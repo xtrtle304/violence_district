@@ -1,381 +1,368 @@
-repeat
-    task.wait()
-until game:IsLoaded()
+local StartClock = os.clock()
 
-local START_TIME = os.clock()
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
 
-local repo = 'https://raw.githubusercontent.com/deividcomsono/Obsidian/main/'
-local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
-local ThemeManager =
-    loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
-local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
-local Options = Library.Options
-local Toggles = Library.Toggles
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
-Library.ForceCheckbox = false
-Library.ShowToggleFrameInKeybinds = true
+local GeneratorRemotes = Remotes:WaitForChild("Generator")
+local SkillCheckEvent = GeneratorRemotes:WaitForChild("SkillCheckEvent")
 
-local Window = Library:CreateWindow({
-    Title = 'Violence District',
-    Footer = 'zov goida',
-    NotifySide = 'Right',
-    ShowCustomCursor = true,
-})
+local Round = Remotes:WaitForChild("Round")
 
-local Tabs = {
-    Main = Window:AddTab('Main', 'user'),
-    ['UI Settings'] = Window:AddTab('UI Settings', 'settings'),
-}
+local Cheat = {
+    Library = loadstring(game:HttpGet(repo .. "Library.lua"))(),
+    ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))(),
+    SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))(),
 
-local LeftGroupBox = Tabs.Main:AddLeftGroupbox('ESP', 'eye')
+    UIWindow = nil,
 
-LeftGroupBox:AddToggle('ESPEnable', {
-    Default = false,
-    Text = 'ESP Enabled',
-})
-LeftGroupBox:AddLabel('ESP Bind'):AddKeyPicker('ESPKeybind', {
-    SyncToggleState = false,
-    Mode = 'Always',
-    Text = 'ESP',
-    NoUI = false,
-})
+    Hooks = {},
+    FunctionHooks = {},
+    Signals = {},
+    Drawings = {},
+    Modules = {},
+    Variables = {
+        Player = nil,
+        Character = nil,
+        SkillcheckGUI = nil,
+        LineGUI = nil,
+        GoalGUI = nil,
+    },
+    DebugMode = _G.StartWithDebug,
+} do
+    local Options = Cheat.Library.Options
+    local Toggles = Cheat.Library.Toggles
 
-Toggles.ESPEnable.Modes = { 'Toggle', 'Hold', 'Always' }
+    Cheat.Library.ForceCheckbox = false
+    Cheat.Library.ShowToggleFrameInKeybinds = true
 
-LeftGroupBox:AddToggle('ESPGenerators', {
-    Default = false,
-    Text = 'Generators',
-})
+    function Cheat:LogOutput(log : string)
+        if not Cheat.DebugMode then return end
+        local Date = DateTime.now():ToLocalTime()
+        print(` [{Date.Hour}:{Date.Minute}:{Date.Seconds}] {log}`)
+    end
 
-LeftGroupBox:AddToggle('ESPPallets', {
-    Default = false,
-    Text = 'Pallets',
-})
+    function Cheat:LogWarn(log : string)
+        if not Cheat.DebugMode then return end
+        local Date = DateTime.now():ToLocalTime()
+        warn(` [{Date.Hour}:{Date.Minute}:{Date.Seconds}] {log}`)
+    end
 
-LeftGroupBox:AddToggle('ESPHooks', {
-    Default = false,
-    Text = 'Hooks',
-})
+    --// UI
+    do
+        Cheat.UIWindow = Cheat.Library:CreateWindow({
+            Title = "Violence District",
+            Footer = "zov goida (refactored)",
+            NotifySide = "Right",
+            ShowCustomCursor = true
+        }); do
+            Cheat.UIWindow:AddTab("Main", "user"); do
+                local ESPGroupbox = Cheat.Library.Tabs["Main"]:AddLeftGroupbox("ESP", "eye"); do
+                    ESPGroupbox:AddToggle("ESPEnabled", {
+                        Text = "Enabled",
+                        Default = false,
+                    })
+                    ESPGroupbox:AddLabel("ESP Bind"):AddKeyPicker("ESPBind", {
+                        SyncToggleState = false,
+                        Mode = 'Always',
+                        Text = 'ESP Bind',
+                        NoUI = false,
+                    })
 
-LeftGroupBox:AddToggle('ESPWindows', {
-    Default = false,
-    Text = 'Windows',
-})
+                    ESPGroupbox:AddDivider()
 
-LeftGroupBox:AddToggle('ESPSurvivors', {
-    Default = false,
-    Text = 'Survivors',
-})
+                    ESPGroupbox:AddToggle("ESPSurvivors", {
+                        Text = "Survivors",
+                        Default = false,
+                    }):AddColorPicker("ESPSurvivors_Color", {
+                        Default = Color3.new(0, 0, 1),
+                        Title = "Survivors top text color",
+                        Transparency = nil,
+                    })
+                    ESPGroupbox:AddToggle("ESPKiller", {
+                        Text = "Killers",
+                        Default = false,
+                    }):AddColorPicker("ESPKiller_Color", {
+                        Default = Color3.new(1, 0, 0),
+                        Title = "Killer top text color",
+                        Transparency = nil,
+                    })
+                    ESPGroupbox:AddToggle("ESPPallets", {
+                        Text = "Pallets",
+                        Default = false,
+                    }):AddColorPicker("ESPPallets_Color", {
+                        Default = Color3.new(0.745098, 0.494118, 0.137255),
+                        Title = "Pallets top text color",
+                        Transparency = nil,
+                    })
+                    ESPGroupbox:AddToggle("ESPWindows", {
+                        Text = "Windows",
+                        Default = false,
+                    }):AddColorPicker("ESPWindows_Color", {
+                        Default = Color3.new(0.25098, 0.615686, 0.913725),
+                        Title = "Windows top text color",
+                        Transparency = nil,
+                    })
+                    ESPGroupbox:AddToggle("ESPHooks", {
+                        Text = "Hooks",
+                        Default = false,
+                    }):AddColorPicker("ESPHooks_Color", {
+                        Default = Color3.new(0.854902, 0.298039, 0.298039),
+                        Title = "Hooks top text color",
+                        Transparency = nil,
+                    })
+                    ESPGroupbox:AddToggle("ESPGenerators", {
+                        Text = "Generators",
+                        Default = false,
+                    }):AddColorPicker("ESPGenerators_TopTextColor", {
+                        Default = Color3.new(1, 1, 1),
+                        Title = "Generators top text color",
+                    }):AddColorPicker("ESPGenerators_FullyRepairedColor", {
+                        Default = Color3.new(0, 1, 0),
+                        Title = "Full repair progress color"
+                    }):AddColorPicker("ESPGenerators_NoRepairedColor", {
+                        Default = Color3.new(1, 0, 0),
+                        Title = "No repair progress color"
+                    })
+                    ESPGroupbox:AddToggle("ESPTeamFilter", {
+                        Text = "Team Filter",
+                        Default = false,
+                    })
+                end
 
-LeftGroupBox:AddToggle('ESPKiller', {
-    Default = false,
-    Text = 'Killer',
-})
+                local SurvivorGroupbox = Cheat.Library.Tabs["Main"]:AddRightGroupbox("Survivor", "user"); do
+                    SurvivorGroupbox:AddToggle("AutoGenerator", {
+                        Text = "Auto Generator",
+                        Enabled = false
+                    })
+                    SurvivorGroupbox:AddDropdown("AutoGeneratorMode", {
+                        Text = "Mode",
+                        Values = { "Perfect", "Neutral" },
+                        Multi = false,
+                        Default = 1
+                    })
 
-LeftGroupBox:AddToggle('ESPTeamFilter', {
-    Default = false,
-    Text = 'Team filter',
-    Tooltip = "Will not display your teammates"
-})
+                    SurvivorGroupbox:AddDivider()
 
-
-local RightGroupBox = Tabs.Main:AddLeftGroupbox('Survivor', 'user')
-
-RightGroupBox:AddToggle('AutoGenerator', {
-    Default = false,
-    Text = 'Auto generator',
-    --Tooltip = "Dev note: Disables SkillCheckEvent OnClientEvent"
-})
-
-RightGroupBox:AddDropdown('AutoGeneratorMode', {
-    Text = "Mode",
-    Values = { "Perfect", "Neutral" },
-    Multi = false,
-    Default = 1,
-})
-
-RightGroupBox:AddDivider()
-
-RightGroupBox:AddToggle("NoHorizontalSlash", {
-    Text = "No Horizontal slash",
-    
-})
-
-RightGroupBox:AddDivider()
-
-RightGroupBox:AddToggle("MultipleSurvivorSpeed", {
-    Text = "Multiple Survivor speed",
-    Default = false
-})
-
-RightGroupBox:AddSlider("MultipleSurvivorSpeedValue", {
-    Compact = true,
-    Default = 1,
-    Min = 1,
-    Max = 5,
-    Rounding = 2
-})
-
-local MenuGroup = Tabs['UI Settings']:AddLeftGroupbox('Menu', 'wrench')
-
-MenuGroup:AddToggle('KeybindMenuOpen', {
-    Default = Library.KeybindFrame.Visible,
-    Text = 'Open Keybind Menu',
-    Callback = function(value)
-        Library.KeybindFrame.Visible = value
-    end,
-})
-MenuGroup:AddToggle('ShowCustomCursor', {
-    Text = 'Custom Cursor',
-    Default = true,
-    Callback = function(Value)
-        Library.ShowCustomCursor = Value
-    end,
-})
-MenuGroup:AddDropdown('NotificationSide', {
-    Values = { 'Left', 'Right' },
-    Default = 'Right',
-
-    Text = 'Notification Side',
-
-    Callback = function(Value)
-        Library:SetNotifySide(Value)
-    end,
-})
-MenuGroup:AddDropdown('DPIDropdown', {
-    Values = { '50%', '75%', '100%', '125%', '150%', '175%', '200%' },
-    Default = '100%',
-
-    Text = 'DPI Scale',
-
-    Callback = function(Value)
-        Value = Value:gsub('%%', '')
-        local DPI = tonumber(Value)
-
-        Library:SetDPIScale(DPI)
-    end,
-})
-MenuGroup:AddDivider()
-MenuGroup:AddLabel('Menu bind'):AddKeyPicker(
-    'MenuKeybind',
-    { Default = 'RightShift', NoUI = true, Text = 'Menu keybind' }
-)
-
-MenuGroup:AddButton('Unload', function()
-    Library:Unload()
-end)
-
-Library.ToggleKeybind = Options.MenuKeybind -- Allows you to have a custom keybind for the menu
-
-ThemeManager:SetLibrary(Library)
-SaveManager:SetLibrary(Library)
-
-SaveManager:IgnoreThemeSettings()
-
-SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
-
-ThemeManager:SetFolder('unnamed_script_hub')
-SaveManager:SetFolder('unnamed_script_hub/violence_district')
-SaveManager:BuildConfigSection(Tabs['UI Settings'])
-ThemeManager:ApplyToTab(Tabs['UI Settings'])
-SaveManager:LoadAutoloadConfig()
-
-local services = setmetatable({}, {
-    __index = function(self, ind)
-        return game.GetService(game, ind)
-    end,
-})
-
-local SetAttribute = game.SetAttribute
-local FindFirstChild = game.FindFirstChild
-local IsA = game.IsA
-
-local WorldToViewportPoint =
-    services.Workspace.CurrentCamera.WorldToViewportPoint
-local Random_NEXTINT = Random.new().NextInteger
-local Random_NEXTFLT = Random.new().NextNumber
-local Random_OBJ = Random.new()
-
-local Player = services.Players.LocalPlayer
-local PlayerGui = Player:WaitForChild('PlayerGui')
-local SkillCheckGui = PlayerGui:WaitForChild('SkillCheckPromptGui')
-    :WaitForChild('Check')
-local SkillCheckGui_Line = SkillCheckGui:WaitForChild('Line')
-local SkillCheckGui_Goal = SkillCheckGui:WaitForChild('Goal')
-local SkillCheckEvent =
-    services.ReplicatedStorage.Remotes.Generator:WaitForChild('SkillCheckEvent')
-local SkillCheckResultEvent =
-    services.ReplicatedStorage.Remotes.Generator:WaitForChild(
-        'SkillCheckResultEvent'
-    )
-
-local modules = {}
-do
-    local __esp_data = { drawings = {}, signals = {}, map_objects = {} };
-    local auto_generator_signal_on_descendant_added = nil;
-    local auto_generator_signal_on_descendant_removing = nil;
-
-    function modules:esp()
-        local __ESP_FULL_COLOR = Color3.new(0, 1, 0)
-        local __ESP_LOW_COLOR = Color3.new(1, 0, 0)
-
-        local function esp_connect(signal, callback)
-            __esp_data.signals[#__esp_data.signals + 1] =
-                signal:Connect(callback)
-        end
-
-        if
-            Toggles.ESPEnable.Value == false
-            or Options.ESPKeybind:GetState() == false
-        then
-            for _, i in __esp_data.drawings do
-                for _, v in i do
-                    if typeof(v) == 'Instance' then
-                        v.Enabled = false
-                        continue
-                    end
-                    v.Visible = false
+                    SurvivorGroupbox:AddToggle("NoHorizontalSlash", {
+                        Text = "No Horizontal Slash",
+                        Default = false
+                    })
                 end
             end
-            return
+
+            Cheat.UIWindow:AddTab("UI Settings", "settings"); do
+                local MenuGroup = Cheat.Library.Tabs["UI Settings"]:AddLeftGroupbox("Menu", "wrench"); do
+                    MenuGroup:AddToggle("KeybindMenuOpen", {
+	                    Default = Cheat.Library.KeybindFrame.Visible,
+	                    Text = "Open Keybind Menu",
+	                    Callback = function(value)
+		                    Cheat.Library.KeybindFrame.Visible = value
+	                    end,
+                    })
+
+                    MenuGroup:AddToggle("ShowCustomCursor", {
+	                    Text = "Custom Cursor",
+	                    Default = true,
+	                    Callback = function(Value)
+		                    Cheat.Library.ShowCustomCursor = Value
+	                    end,
+                    })
+                    MenuGroup:AddDropdown("NotificationSide", {
+                        Values = { "Left", "Right" },
+                        Default = "Right",
+
+                        Text = "Notification Side",
+
+                        Callback = function(Value)
+                            Cheat.Library:SetNotifySide(Value)
+                        end,
+                    })
+                    MenuGroup:AddDropdown("DPIDropdown", {
+                        Values = { "50%", "75%", "100%", "125%", "150%", "175%", "200%" },
+                        Default = "100%",
+
+                        Text = "DPI Scale",
+
+                        Callback = function(Value)
+                            Value = Value:gsub("%%", "")
+                            local DPI = tonumber(Value)
+
+                            Cheat.Library:SetDPIScale(DPI)
+                        end,
+                    })
+                    MenuGroup:AddDivider()
+                    MenuGroup:AddLabel("Menu bind")
+                        :AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+
+                    MenuGroup:AddButton("Unload", function()
+                        Cheat.Library:Unload()
+                    end)
+
+                    Cheat.Library.ToggleKeybind = Options.MenuKeybind
+                    Cheat.ThemeManager:SetLibrary(Cheat.Library)
+                    Cheat.SaveManager:SetLibrary(Cheat.Library)
+                    Cheat.SaveManager:IgnoreThemeSettings()
+                    Cheat.SaveManager:SetIgnoreIndexes({ "MenuKeybind" })
+                    Cheat.ThemeManager:SetFolder("zov_goida")
+                    Cheat.SaveManager:SetFolder("zov_goida/violence_district")
+                    Cheat.SaveManager:BuildConfigSection(Cheat.Library.Tabs["UI Settings"])
+                    Cheat.ThemeManager:ApplyToTab(Cheat.Library.Tabs["UI Settings"])
+                    Cheat.SaveManager:LoadAutoloadConfig()
+                end
+            end
+        end
+    end
+
+    --// Metamethod hooks
+    do
+        Cheat.Hooks.__index = hookmetamethod(game, "__index", newcclosure(function(self, ind)
+            --// autogenerator hook
+            if not checkcaller() and self == Cheat.Variables.LineGUI then
+                if Options.AutoGeneratorMode.Value == "Perfect" then
+                    return 104 + Cheat.Variables.GoalGUI.Rotation
+                else
+                    return 115 + Cheat.Variables.GoalGUI.Rotation
+                end
+            end
+
+            return Cheat.Hooks.__index(self, ind)
+        end))
+
+        Cheat.Hooks.__newindex = hookmetamethod(game, "__newindex", newcclosure(function(self, ind, val)
+            return Cheat.Hooks.__newindex(self, ind, val)
+        end))
+
+        Cheat.Hooks.__namecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+            return Cheat.Hooks.__namecall(self, ...)
+        end))
+    end
+
+    --// Function hooks
+    do
+        function Cheat:HookFunction(old : () -> (), new : () -> ()) : () -> ()
+            local OldFunction; OldFunction = hookfunction(old, new)
+            Cheat.FunctionHooks[#Cheat.FunctionHooks + 1] = OldFunction
+
+            return OldFunction
         end
 
-        if
-            not services.Workspace
-                :FindFirstChild('Map')
-                :FindFirstChild('Antifling')
-        then
-            table.clear(__esp_data.map_objects)
-            return
+        function Cheat:RestoreFunction(old : () -> ())
+            table.remove(Cheat.FunctionHooks, table.find(Cheat.FunctionHooks, old))
+            restorefunction(old)
+        end
+    end
+
+    --// Signals
+    do
+        function Cheat:CreateNewSignal(signal : RBXScriptSignal, callback : () -> any, id : string?)
+            if (id and Cheat.Signals[id] ~= nil) then return end
+
+            local Signal : RBXScriptConnection = signal:Connect(callback)
+            Cheat.Signals[id or #Cheat.Signals + 1] = Signal
+            return Signal
         end
 
-        local function get_map_objects()
-            debug.profilebegin('Get_Map_Objects')
+        function Cheat:FindSignalById(id : string?) : RBXScriptConnection
+            return Cheat.Signals[id]
+        end
+    end
 
-            local result = {
-                ['Generators'] = {},
-                ['Windows'] = {},
-                ['Pallets'] = {},
-                ['Hooks'] = {},
-            }
+    --// Auto Generator
+    do
+        local LastFilterGCResult = nil
 
-            for _, v in services.Workspace.Map:GetChildren() do
+        local function OnDescendantAdded(descendant : Instance)
+            if (descendant and descendant.Parent == Cheat.Variables.Character and descendant.Name == "Skillcheck-gen") then
+                task.wait(1)
+
+                local FilterGCResult = filtergc("function", {
+                    Upvalues = {
+                        CollectionService,
+                        Cheat.Variables.Player,
+                        Cheat.Variables.SkillcheckGUI
+                    }
+                }, false)
+                LastFilterGCResult = FilterGCResult
+
+                for _, func in FilterGCResult do
+                    if not isfunctionhooked(func) then
+                        local OldFunction; OldFunction = Cheat:HookFunction(func, newcclosure(function(...)
+                            if Toggles.AutoGenerator.Value then
+                                return OldFunction("success")
+                            end
+                            return OldFunction(...)
+                        end))
+                    end
+                end
+            end
+        end
+
+        local function OnSkillCheckEvent()
+            if Toggles.AutoGenerator.Value then
+                task.delay(.7, function()
+                    firesignal(UserInputService.InputBegan, {KeyCode = Enum.KeyCode.Space}, false)
+                end)
+            end
+        end
+
+        OnDescendantAdded(Cheat.Variables.Character and Cheat.Variables.Character:FindFirstChildWhichIsA("Skillcheck-gen"))
+        Cheat:CreateNewSignal(Workspace.DescendantAdded, OnDescendantAdded, "AutoGeneratorSignal_OnDescendantAdded")
+        Cheat:CreateNewSignal(SkillCheckEvent.OnClientEvent, OnSkillCheckEvent, "AutoGeneratorSignal_AutoSkillCheck")
+    end
+
+    --// ESP
+    do
+        --// Map objects handler
+        local MapObjects = {
+            ["Generators"] = {},
+            ["Pallets"] = {},
+            ["Windows"] = {},
+            ["Hooks"] = {}
+        }
+
+        local function GetCurrentMapObjects()
+            for _, v in Workspace.Map:GetDescendants() do
                 if v.Name == 'Generator' then
-                    table.insert(result.Generators, v)
+                    table.insert(MapObjects.Generators, v)
                     continue
                 end
-                if v.Name == 'Window' or v:FindFirstChild('Window') then
-                    table.insert(result.Windows, v)
+                if v.Name == 'Window' then
+                    table.insert(MapObjects.Windows, v)
                     continue
                 end
-                if
-                    v.Name == 'Palletwrong' or v:FindFirstChild('Palletwrong')
-                then
-                    if
-                        v.Name == 'Palletwrong'
-                        and v:FindFirstChild('HumanoidRootPart')
-                    then
-                        table.insert(result.Pallets, v)
-                        continue
-                    end
-                    if
-                        v:FindFirstChild('Palletwrong')
-                        and v:FindFirstChild('Palletwrong')
-                            :FindFirstChild('HumanoidRootPart')
-                    then
-                        table.insert(
-                            result.Pallets,
-                            v:FindFirstChild('Palletwrong')
-                        )
-                        continue
-                    end
+                if v.Name == "Palletwrong" then
+                    table.insert(MapObjects.Pallets, v)
+                    continue
                 end
-                if
-                    v.Name == 'PalletAlien' or v:FindFirstChild('PalletAlien')
-                then
-                    if
-                        v.Name == 'PalletAlien'
-                        and v:FindFirstChild('HumanoidRootPart')
-                    then
-                        table.insert(result.Pallets, v)
-                        continue
-                    end
-                    if
-                        v:FindFirstChild('PalletAlien')
-                        and v:FindFirstChild('PalletAlien')
-                            :FindFirstChild('HumanoidRootPart')
-                    then
-                        table.insert(
-                            result.Pallets,
-                            v:FindFirstChild('PalletAlien')
-                        )
-                        continue
-                    end
+                if v.Name == "PalletAlien" then
+                    table.insert(MapObjects.Pallets, v)
+                    continue
                 end
                 if v.Name == 'Hook' then
-                    table.insert(result.Hooks, v)
+                    table.insert(MapObjects.Hooks, v)
                     continue
                 end
             end
-
-            debug.profileend()
-
-            return result
         end
 
-        local function disable_drawings(instance)
-            if not __esp_data.drawings[instance] then
-                return
-            end
-            for i, v in __esp_data.drawings[instance] do
-                if typeof(v) == 'Instance' then
-                    v.Enabled = false
-                    continue
-                end
-                v.Visible = false
-            end
-        end
+        GetCurrentMapObjects()
 
-        if not __esp_data.signals['new_object_on_map'] then
-            __esp_data.signals['new_object_on_map'] = services.Workspace.DescendantRemoving:Connect(function(descendant)
-                if tostring(descendant) == "HumanoidRootPart" and (tostring(descendant.Parent) == "Palletwrong" or tostring(descendant.Parent) == "PalletAlien") then
-                    disable_drawings(descendant)
-                end
-                if tostring(descendant) == "Antifling" then
-                    --// clear drawings
-                    for instance,drawings in __esp_data.drawings do
-                        for _,drawing in drawings do
-                            drawing:Destroy()
-                        end
-                        __esp_data.drawings[instance] = nil
-                    end
-                    --// clear map_objects ref
-                    __esp_data.map_objects = {['Generators'] = {}, ['Windows'] = {}, ['Pallets'] = {}, ['Hooks'] = {}} --// i think luaugc will take it
-                end
-            end)
-            __esp_data.signals['new_object_on_map_2'] = services.Workspace.DescendantAdded:Connect(function(descendant)
-                --if tostring(descendant.Parent) == "Map" then warn(tostring(descendant)) end
-                if tostring(descendant) == "Generator" then
-                    --__esp_data.map_objects = get_map_objects()
-                    table.insert(__esp_data.map_objects['Generators'], descendant)
-                elseif tostring(descendant) == "Window" then
-                    table.insert(__esp_data.map_objects['Windows'], descendant)
-                elseif (tostring(descendant) == "Palletwrong" or tostring(descendant) == "PalletAlien") then
-                    table.insert(__esp_data.map_objects['Pallets'], descendant)
-                elseif tostring(descendant) == "Hook" then
-                    table.insert(__esp_data.map_objects['Hooks'], descendant)
-                end
-            end)
+        --// Player objects handler
+        local PlayerObjects : {[any] : Player} = {}
 
-            __esp_data.map_objects = get_map_objects()
-        end
+        local function GetPlayerObjects()
+            local Result = {}
 
-        local function get_player_objects()
-            local result = {}
-
-            for _, player in services.Players:GetPlayers() do
-                if player == Player then
+            for _, player in Players:GetPlayers() do
+                if player == Players.LocalPlayer then
                     continue
                 end
                 if not player.Character then
@@ -400,538 +387,489 @@ do
                 end
                 if
                     Toggles.ESPTeamFilter.Value
-                    and player_team_name == tostring(Player.Team)
+                    and player_team_name == tostring(Cheat.Variables.Player.Team)
                 then
                     continue
                 end
 
 
-                table.insert(result, player)
+                table.insert(Result, player)
             end
 
-            return result
+            PlayerObjects = Result
         end
 
-        local map_objects = __esp_data.map_objects
-        local players_objects = get_player_objects()
+        GetPlayerObjects()
 
-        debug.profilebegin('ESP Render (Drawing library)')
+        --// Drawing Handler
+        local function DisableDrawingsForInstance(instance : Instance)
+            if Cheat.Drawings[instance] then
+                if type(Cheat.Drawings[instance]) == "table" then
+                    for _, Drawing in Cheat.Drawings[instance] do
+                        if typeof(Drawing) == "Instance" and Drawing:IsA("Highlight") then
+                            Drawing.Enabled = false
+                        else
+                            Drawing.Visible = false
+                        end
+                    end
+                else
+                    if typeof(Cheat.Drawings[instance]) == "Instance" and Cheat.Drawings[instance]:IsA("Highlight") then Cheat.Drawings[instance].Enabled = false; return end
+                    if isrenderobj(Cheat.Drawings[instance]) then Cheat.Drawings[instance].Visible = false end
+                end
+            end
+        end
 
-        for type, map_object_list in map_objects do
-            if #map_object_list == 0 then
-                continue
+        local function ESP_Prerender_event()
+            if not Toggles.ESPEnabled.Value or not Options.ESPBind:GetState() then
+                for Instance, _ in Cheat.Drawings do
+                    DisableDrawingsForInstance(Instance)
+                end
+                return
             end
 
-            if type == 'Generators' then
-                for _, generator in map_object_list do
-                    local repair_amount =
-                        generator:GetAttribute('RepairProgress')
+            if not Workspace.Map:FindFirstChild("Antifling") then
+                return
+            end
 
-                    if not Toggles.ESPGenerators.Value or not generator:FindFirstChild("HitBox") then
-                        disable_drawings(generator)
-                        continue
-                    end
+            for MapObjectType, MapObjectList in MapObjects do
+                if MapObjectType == "Generators" and #MapObjectList > 0 then
+                    for _, Generator : Instance in MapObjectList do
+                        local RepairProgress = Generator:GetAttribute("RepairProgress")
+                        local DebugId = Generator:GetDebugId(16)
 
-                    local root_point = generator.HitBox
-                    --local root_point_on_screen, is_on_screen = WorldToViewportPoint(services.Workspace.CurrentCamera, root_point.Position)
-                    --root_point_on_screen = Vector2.new(root_point_on_screen.X, root_point_on_screen.Y)
-
-                    local top_text_point, is_on_screen = WorldToViewportPoint(
-                        services.Workspace.CurrentCamera,
-                        root_point.Position
-                    )
-                    top_text_point =
-                        Vector2.new(top_text_point.X, top_text_point.Y)
-
-                    if not __esp_data.drawings[generator] then
-                        __esp_data.drawings[generator] = {}
-
-                        local function cleanup_drawings()
-                            if generator.Parent == nil then
-                                if __esp_data.drawings[generator] == nil then return end
-                                for _, drawing in __esp_data.drawings[generator] do
-                                    drawing:Destroy()
-                                end
-                            end
-                        end
-                        esp_connect(
-                            generator:GetPropertyChangedSignal('Parent'),
-                            cleanup_drawings
-                        )
-
-                        __esp_data.drawings[generator].generator_top_text =
-                            Drawing.new('Text')
-                        do
-                            local generator_top_text =
-                                __esp_data.drawings[generator].generator_top_text
-                            generator_top_text.Size = 18
-                            generator_top_text.Font = Drawing.Fonts.UI
-                            generator_top_text.Visible = false
-                            generator_top_text.Color = Color3.new(1, 1, 1)
-                            generator_top_text.Center = true
+                        if not Toggles.ESPGenerators.Value or not Generator:FindFirstChild("HitBox") then
+                            DisableDrawingsForInstance(Generator)
+                            continue 
                         end
 
-                        __esp_data.drawings[generator].generator_repair_amount_text =
-                            Drawing.new('Text')
-                        do
-                            local generator_repair_amount_text =
-                                __esp_data.drawings[generator].generator_repair_amount_text
-                            generator_repair_amount_text.Size = 18
-                            generator_repair_amount_text.Font = Drawing.Fonts.UI
-                            generator_repair_amount_text.Visible = false
-                            generator_repair_amount_text.Color =
-                                Color3.new(1, 0, 0)
-                            generator_repair_amount_text.Center = true
-                        end
+                        local RootPoint = Generator:FindFirstChild("HitBox")
 
-                        __esp_data.drawings[generator].generator_highlight =
-                            Instance.new('Highlight', generator)
-                        do
-                            local generator_highlight =
-                                __esp_data.drawings[generator].generator_highlight
-                            generator_highlight.Enabled = true
-                            generator_highlight.FillColor = Color3.new(1, 0, 0)
-                            generator_highlight.FillTransparency = 0.5
-                            generator_highlight.OutlineColor =
-                                Color3.new(1, 0, 0)
-                            generator_highlight.OutlineTransparency = 0
-                        end
-                    end
+                        local TopTextPoint, IsOnScreen = Workspace.CurrentCamera:WorldToViewportPoint(RootPoint.Position)
+                        TopTextPoint = Vector2.new( TopTextPoint.X, TopTextPoint.Y )
 
-                    local generator_top_text =
-                        __esp_data.drawings[generator].generator_top_text
-                    local generator_repair_amount_text =
-                        __esp_data.drawings[generator].generator_repair_amount_text
-                    local generator_highlight =
-                        __esp_data.drawings[generator].generator_highlight
+                        if not Cheat.Drawings[Generator] then
+                            local OnParentChangedSignal : RBXScriptConnection = nil
 
-                    generator_top_text.Visible = is_on_screen
-                        and Toggles.ESPGenerators.Value
-                    generator_repair_amount_text.Visible = is_on_screen
-                        and Toggles.ESPGenerators.Value
-
-                    generator_top_text.Position = top_text_point
-                    generator_top_text.Text = 'Generator'
-
-                    generator_repair_amount_text.Position = top_text_point
-                        + Vector2.new(0, 14)
-                    generator_repair_amount_text.Text =
-                        `{math.round(repair_amount)}%`
-
-                    local color = __ESP_LOW_COLOR:Lerp(
-                        __ESP_FULL_COLOR,
-                        repair_amount / 100
-                    )
-
-                    generator_highlight.FillColor = color
-                    generator_highlight.OutlineColor = color
-                    generator_repair_amount_text.Color = color
-                end
-            elseif type == 'Windows' then
-                for _, window in map_object_list do
-                    if not Toggles.ESPWindows.Value then
-                        disable_drawings(window)
-                        continue
-                    end
-
-                    local root_point = window:FindFirstChild('inviswall')
-                    if not root_point then
-                        disable_drawings(window)
-                        continue
-                    end
-                    --local root_point_on_screen, is_on_screen = WorldToViewportPoint(services.Workspace.CurrentCamera, root_point.Position)
-                    --root_point_on_screen = Vector2.new(root_point_on_screen.X, root_point_on_screen.Y)
-
-                    local top_text_point, is_on_screen = WorldToViewportPoint(
-                        services.Workspace.CurrentCamera,
-                        root_point.Position
-                    )
-                    top_text_point =
-                        Vector2.new(top_text_point.X, top_text_point.Y)
-
-                    if not __esp_data.drawings[window] then
-                        __esp_data.drawings[window] = {}
-
-                        local function cleanup_drawings()
-                            if not __esp_data.drawings[window] then return end
-                            if window.Parent == nil then
-                                for _, drawing in __esp_data.drawings[window] do
-                                    drawing:Destroy()
-                                end
-                            end
-                        end
-                        esp_connect(
-                            window:GetPropertyChangedSignal('Parent'),
-                            cleanup_drawings
-                        )
-
-                        __esp_data.drawings[window].window_text =
-                            Drawing.new('Text')
-                        do
-                            local window_text =
-                                __esp_data.drawings[window].window_text
-                            window_text.Size = 18
-                            window_text.Font = Drawing.Fonts.UI
-                            window_text.Visible = false
-                            window_text.Color =
-                                Color3.new(0.25098, 0.615686, 0.913725)
-                            window_text.Center = true
-                            window_text.Text = 'Window'
-                        end
-                    end
-
-                    local window_text = __esp_data.drawings[window].window_text
-
-                    window_text.Visible = is_on_screen
-                        and Toggles.ESPWindows.Value
-                    window_text.Position = top_text_point
-                end
-            elseif type == 'Pallets' then
-                for _, pallet in map_object_list do
-                    if not Toggles.ESPPallets.Value or not pallet or not pallet:FindFirstChild("HumanoidRootPart") then
-                        disable_drawings(pallet)
-                        continue
-                    end
-
-                    local root_point = pallet.HumanoidRootPart
-                    --local root_point_on_screen, is_on_screen = WorldToViewportPoint(services.Workspace.CurrentCamera, root_point.Position)
-                    --root_point_on_screen = Vector2.new(root_point_on_screen.X, root_point_on_screen.Y)
-
-                    local top_text_point, is_on_screen = WorldToViewportPoint(
-                        services.Workspace.CurrentCamera,
-                        root_point.Position
-                    )
-                    top_text_point =
-                        Vector2.new(top_text_point.X, top_text_point.Y)
-
-                    if not __esp_data.drawings[pallet] then
-                        __esp_data.drawings[pallet] = {}
-
-                        local function cleanup_drawings()
-                            if pallet:WaitForChild("HumanoidRootPart").Parent == nil then
-                                for _, drawing in __esp_data.drawings[pallet] do
-                                    if typeof(drawing) == 'Instance' then
-                                        drawing:Destroy()
-                                    else
-                                        drawing:Remove()
+                            local function OnParentChanged()
+                                if Generator.Parent == nil then
+                                    if Cheat.Drawings[Generator] == nil then return end
+                                    for _, Drawing in Cheat.Drawings[Generator] do
+                                        Drawing:Destroy()
                                     end
+                                    Cheat.Drawings[Generator] = nil
+                                    OnParentChangedSignal:Disconnect()
+                                end
+                            end
+
+                            OnParentChangedSignal = Cheat:CreateNewSignal(Generator:GetPropertyChangedSignal("Parent"), OnParentChanged, `{DebugId}_OnParentChanged`)
+
+                            Cheat.Drawings[Generator] = {}; do
+                                local GeneratorTopText = Drawing.new("Text"); do
+                                    GeneratorTopText.Size = 18
+                                    GeneratorTopText.Font = Drawing.Fonts.UI
+                                    GeneratorTopText.Visible = false
+                                    GeneratorTopText.Color = Options.ESPGenerators_TopTextColor.Value
+                                    GeneratorTopText.Center = true
+                                    GeneratorTopText.Text = "Generator"
+
+                                    Cheat.Drawings[Generator].TopText = GeneratorTopText;
+                                end
+
+                                local GeneratorRepairProgress = Drawing.new("Text"); do
+                                    GeneratorRepairProgress.Size = 18
+                                    GeneratorRepairProgress.Font = Drawing.Fonts.UI
+                                    GeneratorRepairProgress.Visible = false
+                                    GeneratorRepairProgress.Color = Options.ESPGenerators_NoRepairedColor.Value
+                                    GeneratorRepairProgress.Center = true
+
+                                    Cheat.Drawings[Generator].RepairProgress = GeneratorRepairProgress;
+                                end
+
+                                local GeneratorHighlight = Instance.new("Highlight", Generator); do
+                                    GeneratorHighlight.Enabled = true
+                                    GeneratorHighlight.FillColor = Options.ESPGenerators_NoRepairedColor.Value
+                                    GeneratorHighlight.FillTransparency = 0.5
+                                    GeneratorHighlight.OutlineColor =
+                                        Options.ESPGenerators_NoRepairedColor.Value
+                                    GeneratorHighlight.OutlineTransparency = 0
+                                    GeneratorHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+
+                                    Cheat.Drawings[Generator].Highlight = GeneratorHighlight;
                                 end
                             end
                         end
-                        esp_connect(
-                            pallet:WaitForChild("HumanoidRootPart"):GetPropertyChangedSignal('Parent'),
-                            cleanup_drawings
+
+                        if not IsOnScreen then
+                            DisableDrawingsForInstance(Generator)
+                            continue
+                        end
+
+                        local GeneratorTopText = Cheat.Drawings[Generator].TopText;
+                        local GeneratorRepairProgress = Cheat.Drawings[Generator].RepairProgress;
+                        local GeneratorHighlight = Cheat.Drawings[Generator].Highlight;
+
+                        GeneratorTopText.Visible = true
+                        GeneratorRepairProgress.Visible = true
+                        GeneratorHighlight.Enabled = true
+
+                        GeneratorTopText.Position = TopTextPoint
+                        GeneratorRepairProgress.Position = TopTextPoint + Vector2.new(0, 14)
+
+                        GeneratorRepairProgress.Text = `{math.round(RepairProgress)}%`
+
+                        local GeneratorProgressColor = Options.ESPGenerators_NoRepairedColor.Value:Lerp(
+                            Options.ESPGenerators_FullyRepairedColor.Value,
+                            RepairProgress / 100
                         )
 
-                        __esp_data.drawings[pallet].pallet_text =
-                            Drawing.new('Text')
-                        do
-                            local pallet_text =
-                                __esp_data.drawings[pallet].pallet_text
-                            pallet_text.Size = 18
-                            pallet_text.Font = Drawing.Fonts.UI
-                            pallet_text.Visible = false
-                            pallet_text.Color =
-                                Color3.new(0.745098, 0.494118, 0.137255)
-                            pallet_text.Center = true
-                            pallet_text.Text = 'Pallet'
+                        GeneratorHighlight.FillColor = GeneratorProgressColor
+                        GeneratorHighlight.OutlineColor = GeneratorProgressColor
+                        GeneratorRepairProgress.Color = GeneratorProgressColor
+                        GeneratorTopText.Color = Options.ESPGenerators_TopTextColor.Value
+                    end
+                elseif MapObjectType == "Pallets" and #MapObjectList > 0 then
+                    for _, Pallet : Instance in MapObjectList do
+                        local DebugId = Pallet:GetDebugId(16)
+
+                        if not Toggles.ESPPallets.Value or not Pallet:FindFirstChild("HumanoidRootPart") then
+                            DisableDrawingsForInstance(Pallet)
+                            continue 
                         end
-                    end
 
-                    local pallet_text = __esp_data.drawings[pallet].pallet_text
+                        local RootPoint = Pallet:FindFirstChild("HumanoidRootPart")
 
-                    pallet_text.Visible = is_on_screen
-                        and Toggles.ESPPallets.Value
-                    pallet_text.Position = top_text_point
-                end
-            elseif type == 'Hooks' then
-                for _, hook in map_object_list do
-                    if not Toggles.ESPHooks.Value then
-                        disable_drawings(hook)
-                        continue
-                    end
+                        local TopTextPoint, IsOnScreen = Workspace.CurrentCamera:WorldToViewportPoint(RootPoint.Position)
+                        TopTextPoint = Vector2.new( TopTextPoint.X, TopTextPoint.Y )
 
-                    local root_point = hook.HookPoint
-                    --local root_point_on_screen, is_on_screen = WorldToViewportPoint(services.Workspace.CurrentCamera, root_point.Position)
-                    --root_point_on_screen = Vector2.new(root_point_on_screen.X, root_point_on_screen.Y)
+                        if not Cheat.Drawings[Pallet] then
+                            local OnParentChangedSignal : RBXScriptConnection = nil
+                            local OnChildRemovedSignal : RBXScriptConnection = nil
 
-                    local top_text_point, is_on_screen = WorldToViewportPoint(
-                        services.Workspace.CurrentCamera,
-                        root_point.Position
-                    )
-                    top_text_point =
-                        Vector2.new(top_text_point.X, top_text_point.Y)
+                            local function OnParentChanged()
+                                if Pallet.Parent == nil then
+                                    if Cheat.Drawings[Pallet] == nil then return end
+                                    for _, Drawing in Cheat.Drawings[Pallet] do
+                                        Drawing:Destroy()
+                                    end
+                                    Cheat.Drawings[child] = nil
+                                    OnParentChangedSignal:Disconnect()
+                                    OnChildRemovedSignal:Disconnect()
+                                end
+                            end
 
-                    if not __esp_data.drawings[hook] then
-                        __esp_data.drawings[hook] = {}
+                            local function OnChildRemoved(child : Instance)
+                                if child.Name == "HumanoidRootPart" then
+                                    if Cheat.Drawings[Pallet] == nil then return end
+                                    for _, Drawing in Cheat.Drawings[Pallet] do
+                                        Drawing:Destroy()
+                                    end
+                                    Cheat.Drawings[child] = nil
+                                    OnParentChangedSignal:Disconnect()
+                                    OnChildRemovedSignal:Disconnect()
+                                end
+                            end
 
-                        local function cleanup_drawings()
-                            if hook.Parent == nil then
-                                if not __esp_data.drawings[hook] then return end
-                                for _, drawing in __esp_data.drawings[hook] do
-                                    drawing:Destroy()
+                            OnParentChangedSignal = Cheat:CreateNewSignal(Pallet:GetPropertyChangedSignal("Parent"), OnParentChanged, `{DebugId}_OnParentChanged`)
+                            OnChildRemovedSignal = Cheat:CreateNewSignal(Pallet.ChildRemoved, OnChildRemoved)
+
+                            Cheat.Drawings[Pallet] = {}; do
+                                local PalletTopText = Drawing.new("Text"); do
+                                    PalletTopText.Size = 18
+                                    PalletTopText.Font = Drawing.Fonts.UI
+                                    PalletTopText.Visible = false
+                                    PalletTopText.Color = Options.ESPPallets_Color.Value
+                                    PalletTopText.Center = true
+                                    PalletTopText.Text = "Pallet"
+
+                                    Cheat.Drawings[Pallet].TopText = PalletTopText;
                                 end
                             end
                         end
-                        esp_connect(
-                            hook:GetPropertyChangedSignal('Parent'),
-                            cleanup_drawings
-                        )
 
-                        __esp_data.drawings[hook].hook_text =
-                            Drawing.new('Text')
-                        do
-                            local hook_text =
-                                __esp_data.drawings[hook].hook_text
-                            hook_text.Size = 18
-                            hook_text.Font = Drawing.Fonts.UI
-                            hook_text.Visible = false
-                            hook_text.Color =
-                                Color3.new(0.854902, 0.298039, 0.298039)
-                            hook_text.Center = true
-                            hook_text.Text = 'Hook'
+                        if not IsOnScreen then
+                            DisableDrawingsForInstance(Pallet)
+                            continue
+                        end
+
+                        local PalletTopText = Cheat.Drawings[Pallet].TopText;
+
+                        PalletTopText.Visible = true
+
+                        PalletTopText.Position = TopTextPoint
+
+                        PalletTopText.Color = Options.ESPPallets_Color.Value
+                    end
+                elseif MapObjectType == "Windows" and #MapObjectList > 0 then
+                    for _, Window : Instance in MapObjectList do
+                        local DebugId = Window:GetDebugId(16)
+
+                        if not Toggles.ESPWindows.Value or not Window:FindFirstChild("inviswall") then
+                            DisableDrawingsForInstance(Window)
+                            continue 
+                        end
+
+                        local RootPoint = Window:FindFirstChild("inviswall")
+
+                        local TopTextPoint, IsOnScreen = Workspace.CurrentCamera:WorldToViewportPoint(RootPoint.Position)
+                        TopTextPoint = Vector2.new( TopTextPoint.X, TopTextPoint.Y )
+
+                        if not Cheat.Drawings[Window] then
+                            local OnParentChangedSignal : RBXScriptConnection = nil
+
+                            local function OnParentChanged()
+                                if Window.Parent == nil then
+                                    if Cheat.Drawings[Window] == nil then return end
+                                    for _, Drawing in Cheat.Drawings[Window] do
+                                        Drawing:Destroy()
+                                    end
+                                    Cheat.Drawings[Generator] = nil
+                                    OnParentChangedSignal:Disconnect()
+                                end
+                            end
+
+                            OnParentChangedSignal = Cheat:CreateNewSignal(Window:GetPropertyChangedSignal("Parent"), OnParentChanged, `{DebugId}_OnParentChanged`)
+
+                            Cheat.Drawings[Window] = {}; do
+                                local WindowTopText = Drawing.new("Text"); do
+                                    WindowTopText.Size = 18
+                                    WindowTopText.Font = Drawing.Fonts.UI
+                                    WindowTopText.Visible = false
+                                    WindowTopText.Color = Options.ESPWindows_Color.Value
+                                    WindowTopText.Center = true
+                                    WindowTopText.Text = "Window"
+
+                                    Cheat.Drawings[Window].TopText = WindowTopText;
+                                end
+                            end
+                        end
+
+                        if not IsOnScreen then
+                            DisableDrawingsForInstance(Window)
+                            continue
+                        end
+
+                        local WindowTopText = Cheat.Drawings[Window].TopText;
+
+                        WindowTopText.Visible = true
+
+                        WindowTopText.Position = TopTextPoint
+
+                        WindowTopText.Color = Options.ESPWindows_Color.Value
+                    end
+                elseif MapObjectType == "Hooks" and #MapObjectList > 0 then
+                    for _, Hook : Instance in MapObjectList do
+                        local DebugId = Hook:GetDebugId(16)
+
+                        if not Toggles.ESPHooks.Value or not Hook:FindFirstChild("HookPoint") then
+                            DisableDrawingsForInstance(Hook)
+                            continue 
+                        end
+
+                        local RootPoint = Hook:FindFirstChild("HookPoint")
+
+                        local TopTextPoint, IsOnScreen = Workspace.CurrentCamera:WorldToViewportPoint(RootPoint.Position)
+                        TopTextPoint = Vector2.new( TopTextPoint.X, TopTextPoint.Y )
+
+                        if not Cheat.Drawings[Hook] then
+                            local OnParentChangedSignal : RBXScriptConnection = nil
+
+                            local function OnParentChanged()
+                                if Hook.Parent == nil then
+                                    if Cheat.Drawings[Hook] == nil then return end
+                                    for _, Drawing in Cheat.Drawings[Hook] do
+                                        Drawing:Destroy()
+                                    end
+                                    Cheat.Drawings[Generator] = nil
+                                    OnParentChangedSignal:Disconnect()
+                                end
+                            end
+
+                            OnParentChangedSignal = Cheat:CreateNewSignal(Hook:GetPropertyChangedSignal("Parent"), OnParentChanged, `{DebugId}_OnParentChanged`)
+
+                            Cheat.Drawings[Hook] = {}; do
+                                local HookTopText = Drawing.new("Text"); do
+                                    HookTopText.Size = 18
+                                    HookTopText.Font = Drawing.Fonts.UI
+                                    HookTopText.Visible = false
+                                    HookTopText.Color = Options.ESPHooks_Color.Value
+                                    HookTopText.Center = true
+                                    HookTopText.Text = "Hook"
+
+                                    Cheat.Drawings[Hook].TopText = HookTopText;
+                                end
+                            end
+                        end
+
+                        if not IsOnScreen then
+                            DisableDrawingsForInstance(Hook)
+                            continue
+                        end
+
+                        local HookTopText = Cheat.Drawings[Hook].TopText;
+
+                        HookTopText.Visible = true
+
+                        HookTopText.Position = TopTextPoint
+
+                        HookTopText.Color = Options.ESPHooks_Color.Value
+                    end
+                end
+            end
+
+            for _, PlayerObject : Player in PlayerObjects do
+                local DebugId = PlayerObject:GetDebugId(16)
+
+                if not PlayerObject.Character 
+                or not PlayerObject.Character:FindFirstChild("Head") 
+                or not PlayerObject.Character:FindFirstChild("HumanoidRootPart")
+                or tostring(PlayerObject.Team) == "Spectator" then
+                    DisableDrawingsForInstance(PlayerObject)
+                    continue
+                end
+                local Team = tostring(PlayerObject.Team)
+                local TeamColor = (Team == "Survivors" and Options.ESPSurvivors_Color.Value or Options.ESPKiller_Color.Value)
+
+                local TopPoint = PlayerObject.Character.Head.Position + Vector3.new(0, PlayerObject.Character.Head.Size.Y / 2, 0)
+
+                local TopTextPoint, IsOnScreen = Workspace.CurrentCamera:WorldToViewportPoint(TopPoint)
+                TopTextPoint = Vector2.new( TopTextPoint.X, TopTextPoint.Y )
+
+                if not Cheat.Drawings[PlayerObject] then
+                    local OnParentChangedSignal : RBXScriptConnection = nil
+                    local OnCharacterRemovingSignal : RBXScriptConnection = nil
+
+                    local function OnParentChanged()
+                        if PlayerObject.Character.Parent == nil then
+                            if Cheat.Drawings[PlayerObject] == nil then return end
+                            for _, Drawing in Cheat.Drawings[PlayerObject] do
+                                Drawing:Destroy()
+                            end
+                            Cheat.Drawings[PlayerObject] = nil
+                            OnParentChangedSignal:Disconnect()
+                            OnCharacterRemovingSignal:Disconnect()
                         end
                     end
 
-                    local hook_text = __esp_data.drawings[hook].hook_text
+                    local function OnCharacterRemoving()
+                        if Cheat.Drawings[PlayerObject] == nil then return end
+                        for _, Drawing in Cheat.Drawings[PlayerObject] do
+                            Drawing:Destroy()
+                        end
+                        Cheat.Drawings[PlayerObject] = nil
+                        OnParentChangedSignal:Disconnect()
+                        OnCharacterRemovingSignal:Disconnect()
+                    end
 
-                    hook_text.Visible = is_on_screen
-                        and Toggles.ESPHooks.Value
-                    hook_text.Position = top_text_point
+                    OnParentChangedSignal = Cheat:CreateNewSignal(PlayerObject.Character:GetPropertyChangedSignal("Parent"), OnParentChanged, `{DebugId}_OnParentChanged`)
+                    OnCharacterRemovingSignal = Cheat:CreateNewSignal(PlayerObject.CharacterRemoving, OnCharacterRemoving, `{DebugId}_OnCharacterRemoving`)
+
+                    Cheat.Drawings[PlayerObject] = {}; do
+                        local PlayerObjectTopText = Drawing.new("Text"); do
+                            PlayerObjectTopText.Size = 18
+                            PlayerObjectTopText.Font = Drawing.Fonts.UI
+                            PlayerObjectTopText.Visible = false
+                            PlayerObjectTopText.Color = TeamColor
+                            PlayerObjectTopText.Center = true
+                            PlayerObjectTopText.Text = tostring(PlayerObject)
+
+                            Cheat.Drawings[PlayerObject].TopText = PlayerObjectTopText;
+                        end
+
+                        local PlayerObjectHighlight = Instance.new("Highlight", PlayerObject.Character); do
+                            PlayerObjectHighlight.Enabled = true
+                            PlayerObjectHighlight.FillColor = TeamColor
+                            PlayerObjectHighlight.OutlineColor = TeamColor
+                            PlayerObjectHighlight.FillTransparency = 0.5
+                            PlayerObjectHighlight.OutlineTransparency = 0
+
+                            Cheat.Drawings[PlayerObject].Highlight = PlayerObjectHighlight
+                        end
+                    end
                 end
+
+                if not IsOnScreen then
+                    DisableDrawingsForInstance(PlayerObject)
+                    continue
+                end
+
+                local PlayerObjectTopText = Cheat.Drawings[PlayerObject].TopText
+                local PlayerObjectHighlight = Cheat.Drawings[PlayerObject].Highlight
+
+                PlayerObjectTopText.Visible = true
+                PlayerObjectHighlight.Enabled = true
+                
+                PlayerObjectTopText.Color = TeamColor
+                PlayerObjectHighlight.FillColor = TeamColor
+                PlayerObjectHighlight.OutlineColor = TeamColor
+
+                PlayerObjectTopText.Position = TopTextPoint
             end
         end
 
-        for index, player_object in players_objects do
-            if not player_object.Character or not player_object.Character:FindFirstChild("Head") or not player_object.Character:FindFirstChild("HumanoidRootPart") then
-                disable_drawings(player_object)
+        Cheat:CreateNewSignal(Round.OnClientEvent, function()
+            GetCurrentMapObjects()
+            GetPlayerObjects()
+        end)
+
+        Cheat:CreateNewSignal(RunService.PreRender, ESP_Prerender_event, "ESPRender_Event")
+    end
+
+    --// Variables Handler
+    do
+        Cheat.Variables.Player = Players.LocalPlayer
+
+        local function OnCharacterAdded(character : Model)
+            if not character then return end
+            Cheat.Variables.Character = character
+            Cheat.Variables.SkillcheckGUI = Players.LocalPlayer:WaitForChild('PlayerGui'):WaitForChild('SkillCheckPromptGui'):WaitForChild('Check')
+            Cheat.Variables.GoalGUI = Players.LocalPlayer:FindFirstChild('PlayerGui'):FindFirstChild('SkillCheckPromptGui'):FindFirstChild('Check'):WaitForChild('Goal')
+            Cheat.Variables.LineGUI = Players.LocalPlayer:FindFirstChild('PlayerGui'):FindFirstChild('SkillCheckPromptGui'):FindFirstChild('Check'):WaitForChild('Line')
+        end
+
+        OnCharacterAdded(Players.LocalPlayer.Character)
+        Cheat:CreateNewSignal(Players.LocalPlayer.CharacterAdded, OnCharacterAdded)
+    end
+
+    function Cheat:RestoreGame()
+        --// restoring metamethods
+        local rawMT = getrawmetatable(game)
+        setreadonly(rawMT, false)
+
+        rawMT.__index = Cheat.Hooks.__index
+        rawMT.__newindex = Cheat.Hooks.__newindex
+        rawMT.__namecall = Cheat.Hooks.__namecall
+
+        setreadonly(rawMT, true)
+
+        --// restoring functions
+        for _, original in Cheat.FunctionHooks do
+            Cheat:RestoreFunction(original)
+        end
+
+        --// disconnecting signals
+        for _, signal in Cheat.Signals do
+            signal:Disconnect()
+        end
+
+        --// removing all drawings
+        for _, drawing_list in Cheat.Drawings do
+            if isrenderobj(drawing_list) then
+                drawing_list:Destroy()
                 continue
             end
-            local team_color = player_object.TeamColor.Color
-
-            --local root_point = player_object.Character.HumanoidRootPart.Position
-            local top_point = player_object.Character.Head.Position
-                + Vector3.new(0, player_object.Character.Head.Size.Y / 2, 0)
-
-            local top_text_point, is_on_screen = WorldToViewportPoint(
-                services.Workspace.CurrentCamera,
-                top_point
-            )
-            top_text_point = Vector2.new(top_text_point.X, top_text_point.Y)
-
-            if not __esp_data.drawings[player_object] then
-                __esp_data.drawings[player_object] = {}
-
-                local function cleanup_drawings()
-                    if player_object.Character:WaitForChild("HumanoidRootPart").Parent == nil then
-                        for _, drawing in __esp_data.drawings[player_object] do
-                            drawing:Destroy()
-                        end
-                    end
-                end
-                esp_connect(
-                    player_object.Character:WaitForChild("HumanoidRootPart"):GetPropertyChangedSignal('Parent'),
-                    cleanup_drawings
-                )
-
-                __esp_data.drawings[player_object].player_text =
-                    Drawing.new('Text')
-                do
-                    local player_text =
-                        __esp_data.drawings[player_object].player_text
-                    player_text.Size = 18
-                    player_text.Font = Drawing.Fonts.UI
-                    player_text.Visible = false
-                    player_text.Color = team_color
-                    player_text.Center = true
-                    player_text.Text = tostring(player_object)
-                end
-
-                __esp_data.drawings[player_object].player_highlight =
-                    Instance.new('Highlight', player_object.Character)
-                do
-                    local player_highlight =
-                        __esp_data.drawings[player_object].player_highlight
-                    player_highlight.Enabled = true
-                    player_highlight.FillColor = team_color
-                    player_highlight.FillTransparency = 0.5
-                    player_highlight.OutlineColor = team_color
-                    player_highlight.OutlineTransparency = 0
-                end
-            end
-
-            local player_text = __esp_data.drawings[player_object].player_text
-            local player_highlight = __esp_data.drawings[player_object].player_highlight
-
-            player_highlight.Enabled = true
-            player_text.Visible = is_on_screen
-            player_text.Position = top_text_point
-        end
-
-        debug.profileend()
-    end
-
-    function modules:auto_generator()
-        --[[ stable version without Pefrect support (only Neutral)
-		if not auto_generator_signal then
-			local function onDescendantAdded(descendant)
-				if descendant and descendant.Parent == Player.Character and descendant.Name == "Skillcheck-gen" then
-					task.wait()
-					for i, func in getgc() do
-						if type(func) == "function" and not isexecutorclosure(func) and islclosure(func) then
-							
-							local _getupvalues = getupvalues(func)
-							if (#_getupvalues == 11 and getupvalue(func, 1) == Player.Character:FindFirstChild("CheckInterractable")) then
-								if not isfunctionhooked(func) then
-									local old; old = hookfunction(func, function(...)
-										if Toggles.AutoGenerator.Value then
-											return
-										end
-										return old(...)
-									end)
-								end
-							end
-							
-						end
-					end
-				end
-			end
-
-			onDescendantAdded(Player.Character:FindFirstChild("Skillcheck-gen"))
-			auto_generator_signal = game.DescendantAdded:Connect(onDescendantAdded)
-		end ]]
-        -- unstable (can bug out/stop working) version with Perfect timing support
-        -- i think its stable right now but idk
-        if not auto_generator_signal_on_descendant_added then
-            local current_result = nil
-
-            local function onDescendantAdded(descendant)
-                if
-                    descendant
-                    and descendant.Parent == Player.Character
-                    and descendant.Name == 'Skillcheck-gen'
-                then
-                    task.wait(1)
-                    local results = filtergc('function', {
-                        Upvalues = {
-                            services.CollectionService,
-                            services.Players.LocalPlayer,
-                            services.Players.LocalPlayer:WaitForChild('PlayerGui'):WaitForChild('SkillCheckPromptGui'):WaitForChild('Check')
-                        }
-                    }, false) -- why this shit works but getgc() manual filter dont...
-                    current_result = results;
-                    for i, func in results do
-                        if not isfunctionhooked(func) then
-                            warn(`      hooked function`)
-                            local old
-                            old = hookfunction(func, function(...)
-                                if Toggles.AutoGenerator.Value then
-                                    warn(`              auto generator - success`)
-                                    old('success')
-                                    return
-                                end
-                                return old(...)
-                            end)
-                        end
-                    end
-                end
-            end
-
-            local function onDescendantRemoving(descendant)
-                if (descendant.Name == "Skillcheck-gen" and descendant.Parent == Player) then
-                    for i,func in current_result do
-                        if isfunctionhooked(func) then
-                            warn(`restored function due to Skillcheck-gen deletion`)
-                            restorefunction(func)
-                        end
-                    end
-                end
-            end
-
-            onDescendantAdded(Player.Character:FindFirstChild('Skillcheck-gen'))
-            auto_generator_signal_on_descendant_added =
-                services.Workspace.DescendantAdded:Connect(onDescendantAdded)
-            auto_generator_signal_on_descendant_removing = 
-                services.Workspace.DescendantRemoving:Connect(onDescendantRemoving)
-        end
-    end
-    modules:auto_generator()
-
-    function modules:no_horizontal_slash()
-        if Toggles.NoHorizontalSlash.Value then
-            local ohString1 = "Crouchingserver"
-            local ohBoolean2 = true
-
-            game:GetService("ReplicatedStorage").Remotes.Mechanics.ChangeAttribute:FireServer(ohString1, ohBoolean2)
-        end
-    end
-
-    function modules:cleanup()
-        auto_generator_signal:Disconnect()
-        for i, v in __esp_data do
-            if i == 'drawings' then
-                for i, draw in v do
-                    draw:Destroy()
-                end
-            elseif i == 'signals' then
-                for i, signal in v do
-                    signal:Disconnect()
-                end
+            for _, drawing in drawing_list do
+                drawing:Destroy()
             end
         end
     end
+
+    Cheat.Library:OnUnload(function()
+        Cheat:RestoreGame()
+    end)
+
+    Cheat.Library:Notify({
+        Title = "Successfully loaded",
+        Description = `Successfully loaded in {string.format("%.1f", os.clock() - StartClock)} seconds`,
+        Duration = 4
+    })
 end
-
-local hooks
-hooks = { __old_mts = { __namecall = nil, __index = nil, __newindex = nil } }
-do
-    hooks.__old_mts.__index = hookmetamethod(
-        game,
-        '__index',
-        newcclosure(function(self, ind)
-            if not checkcaller() and Toggles.AutoGenerator.Value then
-                if Player:FindFirstChild('PlayerGui') and Player:FindFirstChild('PlayerGui'):FindFirstChild('SkillCheckPromptGui') and Player:FindFirstChild('PlayerGui'):FindFirstChild('SkillCheckPromptGui'):FindFirstChild('Check') and Player:FindFirstChild('PlayerGui'):FindFirstChild('SkillCheckPromptGui'):FindFirstChild('Check'):FindFirstChild('Line') and self == Player:FindFirstChild('PlayerGui'):FindFirstChild('SkillCheckPromptGui'):FindFirstChild('Check'):FindFirstChild('Line') then
-                    warn(`      {Options.AutoGeneratorMode.Value} ({typeof(Options.AutoGeneratorMode.Value)})`)
-                    if Options.AutoGeneratorMode.Value == "Perfect" then
-                        warn(`perfect autogenerator`)
-                        return 104 + Player:FindFirstChild('PlayerGui'):FindFirstChild('SkillCheckPromptGui'):FindFirstChild('Check'):FindFirstChild('Goal').Rotation
-                    else
-                        warn(`neutral autogenerator`)
-                        return 115 + Player:FindFirstChild('PlayerGui'):FindFirstChild('SkillCheckPromptGui'):FindFirstChild('Check'):FindFirstChild('Goal').Rotation
-                    end
-                end
-            end
-
-            return hooks.__old_mts.__index(self, ind)
-        end)
-    )
-
-    hooks.__old_mts.__namecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        local args = {...}
-
-        if not checkcaller() and tostring(self) == "ChangeAttribute" and Toggles.NoHorizontalSlash.Value then
-            if args[1] == "Crouchingserver" then args[2] = true end
-        end
-
-        return hooks.__old_mts.__namecall(self, unpack(args))
-    end))
-
-    hooks.__old_mts.__newindex = hookmetamethod(game, "__newindex", newcclosure(function(self, ind, val)
-        if not checkcaller() and Toggles.MultipleSurvivorSpeed.Value and Player.Character and self == Player.Character:FindFirstChild("Humanoid") and ind == "WalkSpeed" then
-            return val * Options.MultipleSurvivorSpeedValue.Value
-        end
-        return hooks.__old_mts.__newindex(self, ind, val)
-    end))
-end
-
-services.RunService.PreRender:Connect(function()
-    modules:esp()
-end)
-
-Toggles.NoHorizontalSlash:OnChanged(function()
-    modules:no_horizontal_slash()
-end)
-
-Toggles.MultipleSurvivorSpeed:OnChanged(function()
-    Options.MultipleSurvivorSpeedValue:SetDisabled(not Toggles.MultipleSurvivorSpeed.Value)
-end)
