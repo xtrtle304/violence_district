@@ -35,6 +35,7 @@ local Cheat = {
         GoalGUI = nil,
     },
     DebugMode = getgenv().StartWithDebug,
+    DebugOptions = getgenv().DebugOptions or {["LogWalkspeedChanges"] = true}
 } do
     local Options = Cheat.Library.Options
     local Toggles = Cheat.Library.Toggles
@@ -247,6 +248,13 @@ local Cheat = {
         end))
 
         Cheat.Hooks.__newindex = hookmetamethod(game, "__newindex", newcclosure(function(self, ind, val)
+            if not checkcaller() then
+                if self == Cheat.Variables.Character:FindFirstChildWhichIsA("Humanoid") then
+                    if ind == "WalkSpeed" and Cheat.DebugOptions.LogWalkspeedChanges then
+                        Cheat:LogWarn(`{getcallingscript()} changed LocalPlayer's WalkSpeed`)
+                    end
+                end
+            end
             return Cheat.Hooks.__newindex(self, ind, val)
         end))
 
@@ -575,7 +583,7 @@ local Cheat = {
                                     for _, Drawing in Cheat.Drawings[Pallet] do
                                         Drawing:Destroy()
                                     end
-                                    Cheat.Drawings[child] = nil
+                                    Cheat.Drawings[Pallet] = nil
                                     OnParentChangedSignal:Disconnect()
                                     OnChildRemovedSignal:Disconnect()
                                 end
